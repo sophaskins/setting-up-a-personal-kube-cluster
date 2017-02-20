@@ -1,0 +1,69 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: glowing-bear
+spec:
+  selector:
+    matchLabels:
+      app: glowing-bear
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: glowing-bear
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.11-alpine
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: glowing-bear-src
+          mountPath: /usr/share/nginx/html
+
+      volumes:
+      - name: glowing-bear-src
+        gitRepo:
+          repository: "https://github.com/glowing-bear/glowing-bear.git"
+          revision: "8cb26cbbc8728a5e253e26b50489ffa34c3bbad2"
+          directory: .
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: glowing-bear
+  name: glowing-bear
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+    name: http
+  selector:
+    app: glowing-bear
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: glowing-bear
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+  - hosts:
+    - irc.burnitdown.biz
+    secretName: glowingbear-tls
+  rules:
+  - host: irc.burnitdown.biz
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: glowing-bear
+          servicePort: 80
